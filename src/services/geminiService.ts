@@ -21,7 +21,7 @@ export const analyzeSymptomsStream = async (symptoms: string) => {
   Respond in the language of the user.`;
 
   return ai.models.generateContentStream({
-    model: "gemini-2.0-flash",
+    model: "gemini-3.8-flash",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
 };
@@ -30,7 +30,7 @@ export const getHealthTips = async () => {
   const prompt = "Generate 5 concise, science-backed daily health tips for wellness. Return them in plain JSON. Return ONLY a JSON list of objects with { id, tip, icon (choose a lucide icon name like 'Droplets', 'Moon', 'Footprints', 'Flame', 'Apple', 'Zap', 'Leaf') }.";
   
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-3.8-flash",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
       responseMimeType: "application/json",
@@ -46,7 +46,7 @@ export const getHealthTips = async () => {
 
 export const startWellnessChat = (history: { role: "user" | "model"; content: string }[]) => {
   return ai.chats.create({
-model: "gemini-2.0-flash",
+model: "gemini-3.8-flash",
     config: {
       systemInstruction: "You are HealthDesk AI, a friendly and empathetic AI health assistant. Help users understand their symptoms by asking clear follow-up questions one at a time. Always remind users you are not a doctor. For emergencies like chest pain or breathing difficulty, immediately say to call emergency services. Be warm, concise, and supportive.",
     },
