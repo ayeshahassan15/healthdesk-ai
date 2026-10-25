@@ -1,6 +1,37 @@
-import { GoogleGenAI } from "@google/genai";
+type Msg = { role: "user" | "assistant"; content: string };
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const CHAT_SYSTEM =
+  "You are HealthDesk AI, a friendly and empathetic AI health assistant. Help users understand their symptoms by asking clear follow-up questions one at a time. Always remind users you are not a doctor. For emergencies like chest pain or breathing difficulty, immediately say to call emergency services. Be warm, concise, and supportive.";
+
+async function* streamFromApi(body: object): AsyncGenerator<{ text: string }> {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, stream: true }),
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`API error ${res.status}: ${await res.text()}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const text = decoder.decode(value, { stream: true });
+    if (text) yield { text };
+  }
+}
+
+async function complete(body: object): Promise<string> {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, stream: false }),
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return data.text || "";
+}
 
 export const analyzeSymptomsStream = async (symptoms: string) => {
   const prompt = `You are HealthDesk AI, a friendly health assistant. 
@@ -20,39 +51,50 @@ export const analyzeSymptomsStream = async (symptoms: string) => {
   
   Respond in the language of the user.`;
 
-  return ai.models.generateContentStream({
-    model: "gemini-3.8-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-  });
+  return streamFromApi({ messages: [{ role: "user", content: prompt }] });
 };
 
 export const getHealthTips = async () => {
-  const prompt = "Generate 5 concise, science-backed daily health tips for wellness. Return them in plain JSON. Return ONLY a JSON list of objects with { id, tip, icon (choose a lucide icon name like 'Droplets', 'Moon', 'Footprints', 'Flame', 'Apple', 'Zap', 'Leaf') }.";
-  
-  const response = await ai.models.generateContent({
-    model: "gemini-3.8-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-    }
-  });
+  const prompt =
+    'Generate 5 concise, science-backed daily health tips for wellness. Return ONLY a JSON object like {"tips": [{"id": 1, "tip": "...", "icon": "Droplets"}]}. For icon, choose a lucide icon name like Droplets, Moon, Footprints, Flame, Apple, Zap, or Leaf.';
 
   try {
-    return JSON.parse(response.text || "[]");
+    const text = await complete({
+      messages: [{ role: "user", content: prompt }],
+      json: true,
+    });
+    const parsed = JSON.parse(text || "[]");
+    return Array.isArray(parsed) ? parsed : parsed.tips || [];
   } catch (e) {
     return [];
   }
 };
 
-export const startWellnessChat = (history: { role: "user" | "model"; content: string }[]) => {
-  return ai.chats.create({
-model: "gemini-3.8-flash",
-    config: {
-      systemInstruction: "You are HealthDesk AI, a friendly and empathetic AI health assistant. Help users understand their symptoms by asking clear follow-up questions one at a time. Always remind users you are not a doctor. For emergencies like chest pain or breathing difficulty, immediately say to call emergency services. Be warm, concise, and supportive.",
+export const startWellnessChat = (
+  history: { role: "user" | "model"; content: string }[]
+) => {
+  const messages: Msg[] = history.map((m) => ({
+    role: m.role === "model" ? "assistant" : "user",
+    content: m.content,
+  }));
+
+  return {
+    sendMessageStream: async ({ message }: { message: string }) => {
+      messages.push({ role: "user", content: message });
+      return (async function* () {
+        let full = "";
+        for await (const chunk of streamFromApi({ system: CHAT_SYSTEM, messages })) {
+          full += chunk.text;
+          yield chunk;
+        }
+        messages.push({ role: "assistant", content: full });
+      })();
     },
-    history: history.map((m) => ({
-      role: m.role,
-      parts: [{ text: m.content }],
-    })),
-  });
+    sendMessage: async ({ message }: { message: string }) => {
+      messages.push({ role: "user", content: message });
+      const text = await complete({ system: CHAT_SYSTEM, messages });
+      messages.push({ role: "assistant", content: text });
+      return { text };
+    },
+  };
 };

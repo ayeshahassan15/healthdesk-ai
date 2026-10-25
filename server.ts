@@ -1,8 +1,10 @@
+
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import chatHandler from "./api/chat.ts";
 
 dotenv.config();
 
@@ -14,7 +16,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
-
+app.post("/api/chat", chatHandler);
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
