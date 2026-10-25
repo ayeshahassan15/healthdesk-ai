@@ -1,20 +1,53 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# HealthDesk AI
 
-# Run and deploy your AI Studio app
+An AI-powered wellness assistant that gives symptom guidance, health tips, and a friendly health chat. Built for the **AI Seekho 2026 Hackathon** (winner).
 
-This contains everything you need to run your app locally.
+**Live demo:** https://healthdesk-ai-beta.vercel.app
 
-View your app in AI Studio: https://ai.studio/apps/e1786f17-9b1d-446f-8b40-3a00832b4c3a
+> HealthDesk AI is not a substitute for professional medical advice.
+
+## Features
+
+- **Symptom Checker:** describe your symptoms and get a streamed answer with a severity label (mild, moderate, urgent) and a wellness score
+- **Wellness Chat:** a multi-turn health chat that remembers the conversation
+- **Wellness Dashboard:** daily health metrics, a BMI calculator, and a health tip of the day
+- **Safety first:** the AI always says it is not a doctor and tells users to call emergency services for serious symptoms
+
+## Tech Stack
+
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS
+- **Backend:** serverless API function (`api/chat.ts`) that keeps the AI key on the server
+- **AI:** Groq API (`openai/gpt-oss-20b`) with streaming responses
+- **Database:** Firebase Firestore
+- **Hosting:** Vercel
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js 20 or newer
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```
+   npm install
+   ```
+2. Create a `.env` file in the main folder and add your Groq API key (get one at https://console.groq.com):
+   ```
+   GROQ_API_KEY=your_key_here
+   ```
+3. Start the app:
+   ```
+   npm run dev
+   ```
+4. Open http://localhost:3000
+
+## Project Structure
+
+```
+api/chat.ts        Serverless function that calls Groq (key stays hidden)
+src/services/      Frontend helpers that call /api/chat
+src/               React pages and components
+server.ts          Local dev server (runs the app and the API together)
+```
+
+## Deploy
+
+The app is deployed on Vercel. Add `GROQ_API_KEY` in Project Settings, Environment Variables, then deploy.
