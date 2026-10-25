@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A single message in a wellness chat session.",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sessionId", "role", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/chats/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Collection of all chat messages across sessions."
+    }
+  }
+}

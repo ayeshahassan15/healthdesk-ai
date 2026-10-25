@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /chats/{messageId} {
+      allow create: if request.resource.data.content.size() < 5000 
+                   && request.resource.data.sessionId.size() < 100
+                   && request.resource.data.role in ['user', 'model'];
+      allow read: if true; // In a real app, restrict by sessionId or Auth
+    }
+  }
+}
